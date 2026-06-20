@@ -42,7 +42,10 @@ def readyz() -> dict[str, str]:
 
 @app.get("/products", response_model=list[Product], tags=["catalog"])
 def list_products(
-    min_quantity: Annotated[int, Query(ge=0, description="Only return products with stock >= value")] = 0,
+    min_quantity: Annotated[
+        int,
+        Query(ge=0, description="Only return products with stock >= value"),
+    ] = 0,
 ) -> list[Product]:
     return [product for product in CATALOG.values() if product.quantity_available >= min_quantity]
 
