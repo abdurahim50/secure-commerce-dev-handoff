@@ -1,0 +1,53 @@
+services:
+  catalog-service:
+    build:
+      context: ./services/catalog-service
+    image: secure-commerce/catalog-service:dev
+    container_name: catalog-service
+    ports:
+      - "8001:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2).read()",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - secure-commerce-net
+
+  orders-service:
+    build:
+      context: ./services/orders-service
+    image: secure-commerce/orders-service:dev
+    container_name: orders-service
+    environment:
+      CATALOG_SERVICE_URL: http://catalog-service:8000
+    ports:
+      - "8002:8000"
+    depends_on:
+      catalog-service:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2).read()",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - secure-commerce-net
+
+networks:
+  secure-commerce-net:
+    driver: bridge
