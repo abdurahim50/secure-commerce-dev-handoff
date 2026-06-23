@@ -1,9 +1,10 @@
-.PHONY: help venv install install-catalog install-orders test test-catalog test-orders lint lint-catalog lint-orders bandit bandit-catalog bandit-orders audit security run-catalog run-orders clean clean-venv
+.PHONY: help venv install install-catalog install-orders test test-catalog test-orders lint lint-catalog lint-orders bandit bandit-catalog bandit-orders audit security run-catalog run-orders compose-config compose-up compose-ps compose-logs compose-down clean clean-venv
 
 SYSTEM_PYTHON ?= python3
 VENV ?= $(CURDIR)/.venv
 PYTHON ?= $(VENV)/bin/python
 PIP := $(PYTHON) -m pip
+COMPOSE ?= docker compose
 
 CATALOG_DIR := services/catalog-service
 ORDERS_DIR := services/orders-service
@@ -25,6 +26,13 @@ help:
 	@echo "Local runtime:"
 	@echo "  make run-catalog      Run catalog-service on port 8001"
 	@echo "  make run-orders       Run orders-service on port 8002"
+	@echo ""
+	@echo "Docker Compose:"
+	@echo "  make compose-config   Validate Docker Compose configuration"
+	@echo "  make compose-up       Build and start all services with Docker Compose"
+	@echo "  make compose-ps       Show Docker Compose service status"
+	@echo "  make compose-logs     Show Docker Compose logs"
+	@echo "  make compose-down     Stop and remove Docker Compose services"
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  make clean            Remove Python cache/test cache files"
@@ -79,6 +87,21 @@ run-catalog:
 
 run-orders:
 	cd $(ORDERS_DIR) && CATALOG_SERVICE_URL=http://localhost:8001 $(PYTHON) -m uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+
+compose-config:
+	$(COMPOSE) config
+
+compose-up:
+	$(COMPOSE) up --build -d
+
+compose-ps:
+	$(COMPOSE) ps
+
+compose-logs:
+	$(COMPOSE) logs --tail=40
+
+compose-down:
+	$(COMPOSE) down
 
 clean:
 	find . -type d -name "__pycache__" -prune -exec rm -rf {} +
