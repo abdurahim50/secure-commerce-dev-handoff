@@ -1,129 +1,408 @@
-# SecureCommerce Developer Handoff
+# SecureCommerce DevOps Handoff
 
-This repository represents the **application team handoff** for the SecureCommerce microservices project.
+SecureCommerce is a two-service FastAPI microservices project used to practice real-world DevOps and DevSecOps workflows.
 
-It intentionally contains only developer-owned application code, dependency files, tests, and API handoff documentation. DevOps/DevSecOps files such as Dockerfiles, Docker Compose, GitHub Actions workflows, Kubernetes manifests, cloud infrastructure, security policy, deployment scripts, and release automation are intentionally **not included**.
+The project started as an application team handoff and was extended with production-style delivery assets, including Dockerfiles, Docker Compose, Makefile automation, security checks, and a GitHub Actions CI pipeline.
 
-The Platform/DevOps team is expected to build those delivery assets from scratch.
+## Services
 
-## Application services
+| Service           | Runtime               | Description                                                       | Local Port |
+| ----------------- | --------------------- | ----------------------------------------------------------------- | ---------- |
+| `catalog-service` | Python 3.12 / FastAPI | Provides product catalog APIs                                     | `8001`     |
+| `orders-service`  | Python 3.12 / FastAPI | Creates and lists orders. Calls catalog-service to validate SKUs. | `8002`     |
 
-| Service | Runtime | Description | Local port suggestion |
-|---|---|---|---|
-| `catalog-service` | Python / FastAPI | Provides product catalog APIs | `8001` |
-| `orders-service` | Python / FastAPI | Creates and lists orders. Calls catalog-service to validate SKUs. | `8002` |
+## Architecture
 
-## Service ownership
+```text
+User/API Client
+      |
+      v
+orders-service
+      |
+      v
+catalog-service
+```
 
-The development team owns:
+`orders-service` depends on `catalog-service` through this environment variable:
 
-- FastAPI application code under `services/*/app/`
-- Unit tests under `services/*/tests/`
-- Python dependency files
-- API behavior and service contracts
+```bash
+CATALOG_SERVICE_URL=http://catalog-service:8000
+```
 
-The DevOps/DevSecOps team will own, create, and maintain:
-
-- Dockerfiles
-- Docker Compose
-- CI/CD workflows
-- Security scans
-- Kubernetes manifests
-- Cloud infrastructure
-- Deployment scripts
-- Secrets and environment strategy
-- Release and rollback process
-- Monitoring and production operations
-
-## API summary
-
-### Catalog service
-
-Base URL in local development: `http://localhost:8001`
-
-Endpoints:
-
-- `GET /healthz`
-- `GET /readyz`
-- `GET /products`
-- `GET /products/{sku}`
-
-### Orders service
-
-Base URL in local development: `http://localhost:8002`
-
-Endpoints:
-
-- `GET /healthz`
-- `GET /readyz`
-- `POST /orders`
-- `GET /orders`
-- `GET /orders/{order_id}`
-
-The orders service depends on the catalog service through this environment variable:
+When running locally without containers, use:
 
 ```bash
 CATALOG_SERVICE_URL=http://localhost:8001
 ```
 
-## Run locally without DevOps tooling
+## Repository Structure
 
-This section is for application developers only. DevOps will later replace this with Docker, Compose, CI/CD, and Kubernetes workflows.
-
-### Catalog service
-
-```bash
-cd services/catalog-service
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt -r requirements-dev.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+```text
+secure-commerce-dev-handoff/
+├── .github/workflows/ci.yml
+├── docs/
+│   ├── api-contract.md
+│   └── developer-handoff.md
+├── services/
+│   ├── catalog-service/
+│   │   ├── app/
+│   │   ├── tests/
+│   │   ├── Dockerfile
+│   │   ├── requirements.txt
+│   │   ├── requirements-dev.txt
+│   │   └── pyproject.toml
+│   └── orders-service/
+│       ├── app/
+│       ├── tests/
+│       ├── Dockerfile
+│       ├── requirements.txt
+│       ├── requirements-dev.txt
+│       └── pyproject.toml
+├── docker-compose.yml
+├── Makefile
+├── README.md
+└── .gitignore
 ```
 
-### Orders service
+## Prerequisites
 
-Open a second terminal:
+Install the following tools:
+
+* Python 3.12+
+* Docker
+* Docker Compose
+* Git
+* Make
+
+Verify your tools:
 
 ```bash
-cd services/orders-service
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt -r requirements-dev.txt
-export CATALOG_SERVICE_URL=http://localhost:8001
-uvicorn app.main:app --host 0.0.0.0 --port 8002 --reload
+python3 --version
+docker --version
+docker compose version
+git --version
+make --version
 ```
 
-## Manual test examples
+## Quick Start
+
+Create the virtual environment and install dependencies:
+
+```bash
+make install
+```
+
+Run tests:
+
+```bash
+make test
+```
+
+Run lint checks:
+
+```bash
+make lint
+```
+
+Run security checks:
+
+```bash
+make security
+```
+
+Start the full application stack with Docker Compose:
+
+```bash
+make compose-up
+```
+
+Check service status:
+
+```bash
+make compose-ps
+```
+
+Stop the stack:
+
+```bash
+make compose-down
+```
+
+## Makefile Commands
+
+| Command               | Description                                      |
+| --------------------- | ------------------------------------------------ |
+| `make help`           | Show available commands                          |
+| `make venv`           | Create local Python virtual environment          |
+| `make install`        | Install runtime and development dependencies     |
+| `make test`           | Run all unit tests                               |
+| `make lint`           | Run Ruff lint checks                             |
+| `make bandit`         | Run Bandit security scans                        |
+| `make audit`          | Run pip-audit dependency vulnerability scans     |
+| `make security`       | Run Bandit and pip-audit                         |
+| `make run-catalog`    | Run catalog-service locally on port 8001         |
+| `make run-orders`     | Run orders-service locally on port 8002          |
+| `make compose-config` | Validate Docker Compose configuration            |
+| `make compose-up`     | Build and start all services with Docker Compose |
+| `make compose-ps`     | Show Docker Compose service status               |
+| `make compose-logs`   | Show Docker Compose logs                         |
+| `make compose-down`   | Stop and remove Docker Compose services          |
+| `make clean`          | Remove Python cache and test cache files         |
+| `make clean-venv`     | Remove the local virtual environment             |
+
+## API Endpoints
+
+### Catalog Service
+
+Base URL:
+
+```text
+http://localhost:8001
+```
+
+Endpoints:
+
+```text
+GET /healthz
+GET /readyz
+GET /products
+GET /products/{sku}
+```
+
+Example:
 
 ```bash
 curl http://localhost:8001/healthz
-curl http://localhost:8002/healthz
 curl http://localhost:8001/products
+```
+
+### Orders Service
+
+Base URL:
+
+```text
+http://localhost:8002
+```
+
+Endpoints:
+
+```text
+GET /healthz
+GET /readyz
+POST /orders
+GET /orders
+GET /orders/{order_id}
+```
+
+Example order request:
+
+```bash
 curl -X POST http://localhost:8002/orders \
   -H "Content-Type: application/json" \
   -d '{"customer_id":"cust-1001","sku":"LAPTOP-001","quantity":1}'
 ```
 
-## Unit tests
+## Running Without Containers
 
-Run tests inside each service directory:
-
-```bash
-cd services/catalog-service
-pytest
-```
+Start catalog-service:
 
 ```bash
-cd services/orders-service
-pytest
+make run-catalog
 ```
 
-## Developer handoff notes
+In a second terminal, start orders-service:
 
-- Both services expose `/healthz` and `/readyz`.
-- Both services listen on port `8000` inside a future container, but developers commonly run them on `8001` and `8002` locally.
-- `orders-service` must be configured with `CATALOG_SERVICE_URL`.
-- Current storage is in-memory only. Data does not persist after restart.
-- There is no authentication in this version.
-- There is no database in this version.
-- Production hardening is expected from the Platform/DevSecOps team.
+```bash
+make run-orders
+```
+
+Then test:
+
+```bash
+curl http://localhost:8001/healthz
+curl http://localhost:8002/healthz
+```
+
+## Running With Docker Compose
+
+Validate the Compose configuration:
+
+```bash
+make compose-config
+```
+
+Build and start both services:
+
+```bash
+make compose-up
+```
+
+Check service status:
+
+```bash
+make compose-ps
+```
+
+View logs:
+
+```bash
+make compose-logs
+```
+
+Stop and remove containers/network:
+
+```bash
+make compose-down
+```
+
+## Docker Images
+
+Build catalog-service manually:
+
+```bash
+docker build -t secure-commerce/catalog-service:dev services/catalog-service
+```
+
+Build orders-service manually:
+
+```bash
+docker build -t secure-commerce/orders-service:dev services/orders-service
+```
+
+Both services run on port `8000` inside their containers.
+
+Host port mapping through Docker Compose:
+
+```text
+catalog-service: localhost:8001 -> container port 8000
+orders-service:  localhost:8002 -> container port 8000
+```
+
+## Security
+
+This project includes DevSecOps checks:
+
+```bash
+make bandit
+make audit
+make security
+```
+
+Security tooling:
+
+* `bandit` scans Python code for common security issues.
+* `pip-audit` scans Python dependencies for known vulnerabilities.
+* Containers run as a non-root user named `appuser`.
+
+Verify container user:
+
+```bash
+make compose-up
+docker compose exec catalog-service id
+docker compose exec orders-service id
+make compose-down
+```
+
+Expected user:
+
+```text
+uid=10001(appuser)
+```
+
+## Continuous Integration
+
+GitHub Actions workflow:
+
+```text
+.github/workflows/ci.yml
+```
+
+The CI pipeline runs on:
+
+* Pull requests into `main`
+* Pushes to `main`
+* Manual workflow dispatch
+
+CI jobs:
+
+1. Tests, lint, and security
+
+   * Installs Python dependencies
+   * Runs unit tests
+   * Runs Ruff lint checks
+   * Runs Bandit
+   * Runs pip-audit
+
+2. Container build and Compose validation
+
+   * Builds catalog-service Docker image
+   * Builds orders-service Docker image
+   * Validates Docker Compose configuration
+
+## Troubleshooting
+
+### Docker daemon is not running
+
+If Docker commands fail, start Docker Desktop or the Docker daemon.
+
+Check Docker:
+
+```bash
+docker info
+```
+
+### Port already in use
+
+If ports `8001` or `8002` are already being used, stop existing containers:
+
+```bash
+docker compose down
+```
+
+Check running containers:
+
+```bash
+docker ps
+```
+
+### Orders service cannot reach catalog service
+
+When using Docker Compose, make sure the environment variable uses the Compose service name:
+
+```bash
+CATALOG_SERVICE_URL=http://catalog-service:8000
+```
+
+When running locally without containers, use:
+
+```bash
+CATALOG_SERVICE_URL=http://localhost:8001
+```
+
+### GitHub Actions fails on Docker Hub pull
+
+If the base image cannot be pulled, check Docker Hub availability or authentication/rate limits.
+
+The base image is:
+
+```text
+python:3.12-slim
+```
+
+## Current Status
+
+Completed DevOps work:
+
+* Git baseline and branch workflow
+* Local Python validation
+* Root Makefile automation
+* Dockerfiles for both services
+* Docker Compose runtime
+* Security scans with Bandit and pip-audit
+* GitHub Actions CI pipeline
+
+## Notes
+
+This project uses in-memory data only. Data does not persist after service restart.
+
+There is no authentication, database, Kubernetes deployment, cloud infrastructure, monitoring stack, or production secrets management yet. These are future platform engineering enhancements.
